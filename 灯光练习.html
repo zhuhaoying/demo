@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>灯光练习</title>
+  <meta content="width=device-width, initial-scale=1, user-scalable=no" name="viewport">
+ 
+</head>
+
+<body>
+	<div id="start">
+		<div style="float:left; margin-right: 20px;">模式选择</div>
+		<select style="float:left; margin-right: 20px;" id="model">
+			<option value="1">乱序练习</option>
+			<option value="2">顺序练习</option>
+			<option value="3">场景乱序</option>
+			<option value="4">操作乱序</option>		
+		</select>
+		<div style="float:left;"><button onclick="start();">开始练习</button></div>
+		<br/>
+		<hr/>
+	</div>	
+	<div style="clear: both;" id="work">
+		<div>
+			<label>正确：</label><span id="right">0</span>
+			<label style="margin-left:20px;">错误：</label><span id="wrong" style="color:red;">0</span>
+			<label style="margin-left:20px;">倒计时：</label><span id="seconds">10</span>
+		</div>
+		<br/>
+		<hr/>
+		<div style="display:none;" id="work-item">
+			<div id="scene" style="font-weight: bold;"></div>
+			<ul id='options'>
+			</ul>
+			<button style="display:none;" onclick="next();">下一题</button>
+			<br/>
+			<hr/>
+		</div>		
+	</div>	
+	<div style="display:none;" id="end">
+		<div id="score"></div>
+		<div id="result"></div>
+		<button onclick="restart();">重新开始</button>
+	</div>
+  <script>
+	var model = '1';
+	var secondLimit = 10;
+	var timer = null;
+	var result = {right: 0, wrong: 0};
+	var currentIndex = 0;
+	var workScenes = [];
+	var workLightOpts = [];
+	var scenes = [
+	{id: '1', scene: '夜间通过急弯', opt: '1'},
+	{id: '2', scene: '夜间通过坡路', opt: '1'},
+	{id: '3', scene: '夜间通过拱桥', opt: '1'},
+	{id: '4', scene: '夜间通过人行横道', opt: '1'},
+	{id: '5', scene: '夜间通过没有交通信号灯控制的路口', opt: '1'},
+	{id: '6', scene: '夜间超车', opt: '1'},
+	{id: '11', scene: '夜间同方向近距离跟车行驶', opt: '2'},
+	{id: '12', scene: '夜间发生会车', opt: '2'},
+	{id: '13', scene: '夜间直行通过路口', opt: '2'},
+	{id: '14', scene: '夜间路口左转弯', opt: '2'},
+	{id: '15', scene: '夜间路口右转弯', opt: '2'},
+	{id: '16', scene: '夜间在有路灯的道路上行驶', opt: '2'},
+	{id: '17', scene: '夜间在照明良好的道路上行驶', opt: '2'},
+	{id: '21', scene: '夜间在没有照明的道路上行驶', opt: '3'},
+	{id: '22', scene: '夜间在照明不良的道路上行驶', opt: '3'},
+	{id: '31', scene: '车辆发生故障', opt: '4'},
+	{id: '32', scene: '路边临时停车', opt: '4'},
+	{id: '41', scene: '请关闭所有灯光', opt: '5'}
+	];
+	var lightOpts = [
+	{order: 'A', optDesc: '交替使用远近光灯（不允许出现除“交替”外的其他灯光变化）', value: '1'},
+	{order: 'B', optDesc: '开近光灯', value: '2'},
+	{order: 'C', optDesc: '开远光灯', value: '3'},
+	{order: 'D', optDesc: '关大灯，开双跳', value: '4'},
+	{order: 'E', optDesc: '关闭灯光', value: '5'}
+	];
+
+	function start () {
+		model = getEl('model').value
+		getEl('start').style.display = 'none';
+		getEl('work-item').style.display = 'block'
+		work();
+	}
+	function work () {
+		if (model==='1' || model==='3') {
+			workScenes = copyArray(scenes)
+			setRandom(workScenes)
+			workLightOpts = copyArray(lightOpts)
+		}
+		if (model==='2' || model==='4') {
+			workScenes = copyArray(scenes)
+			workLightOpts = copyArray(lightOpts)
+		}
+		next();
+	}
+	function getEl (id) {
+		return document.getElementById(id)
+	}
+	function setRandom (array) {
+		array.sort(function(){
+			return 0.5 - Math.random()
+		})
+	}
+	function setLightOptions (_lightopts) {
+		let _order = ['A', 'B', 'C', 'D', 'E'];
+		for (var i=0; i<_lightopts.length; i++) {
+			_lightopts[i].order = _order[i];
+		}
+	}
+	function copyArray (array) {
+		return JSON.parse(JSON.stringify(array));
+	}
+	function next () {
+		stopTimer();
+		renderResult();
+		if (!workScenes[currentIndex]) {
+			showResult();
+			return;
+		}
+		secondLimit = 10;
+		render();	
+		runTimer();
+		currentIndex++
+	}
+	function showResult () {
+		getEl('end').style.display = 'block';
+		getEl('work-item').style.display = 'none';
+		alert('答对'+result.right+'题，答错'+result.wrong+'题');		
+	}
+	function renderResult () {
+		getEl('right').innerHTML = result.right;
+		getEl('wrong').innerHTML = result.wrong;
+	}
+	function render () {
+		getEl('scene').innerHTML = (currentIndex+1) + '、' + workScenes[currentIndex].scene;
+		var optionsHtml = '';
+		(model==='1' || model==='4') && setRandom(workLightOpts);
+		setLightOptions(workLightOpts);
+		workLightOpts.forEach(function(value, index, array){
+			optionsHtml += '<li style="margin:20px 0;" onclick="select('+index+')">'+value.order + '、' + value.optDesc+'</li>';
+		})
+		getEl('options').innerHTML = optionsHtml;	
+	}
+	function setSeconds () {
+		getEl('seconds').innerHTML = --secondLimit;
+		if(secondLimit===0){
+			stopTimer();
+			calcScore();
+			next();		
+		}
+	}
+	function runTimer () {
+		timer = setInterval(setSeconds, 1000)
+	}
+	function stopTimer () {
+		timer&&clearInterval(timer)
+		getEl('seconds').innerHTML = 10;
+	}
+	function calcScore (isRight) {
+		isRight ? result.right++ : result.wrong++;
+	}
+	function select (index) {
+		calcScore(workLightOpts[index].value===workScenes[currentIndex - 1].opt);
+		next();
+	}
+	function restart () {
+		location.reload();
+	}
+	</script>
+</body>
+
+</html>
